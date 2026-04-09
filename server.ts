@@ -40,6 +40,8 @@ async function startServer() {
     console.log(`Player connected: ${socket.id}`);
 
     socket.on("join", (name: string) => {
+      if (players.has(socket.id)) return; // Prevent duplicate joins
+      
       const newPlayer: Player = {
         id: socket.id,
         name: name || `Player_${Math.floor(Math.random() * 1000)}`,

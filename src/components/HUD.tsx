@@ -3,13 +3,16 @@ import { useGameStore } from '../store/gameStore';
 
 export const HUD: React.FC = () => {
   const myId = useGameStore(state => state.myId);
-  const me = useGameStore(state => myId ? state.players.get(myId) : null);
+  const playersMap = useGameStore(state => state.players);
   const isConnected = useGameStore(state => state.isConnected);
+
+  const players = Array.from(playersMap.values());
+  const me = myId ? playersMap.get(myId) : null;
 
   if (!me) return null;
 
   return (
-    <div className="absolute top-4 left-4 pointer-events-none">
+    <div className="absolute top-4 left-4 pointer-events-none flex gap-4">
       <div className="bg-black/60 backdrop-blur-md border border-cyan-900/50 rounded-lg p-4 w-64 font-mono">
         <div className="flex justify-between items-center mb-2">
           <span className="text-cyan-400 font-bold uppercase tracking-wider">{me.name}</span>
@@ -38,6 +41,20 @@ export const HUD: React.FC = () => {
           <div className="px-2 py-1 rounded border border-gray-700 text-gray-400">
             SAFE ZONE
           </div>
+        </div>
+      </div>
+      
+      {/* Online Players List */}
+      <div className="bg-black/60 backdrop-blur-md border border-cyan-900/50 rounded-lg p-4 w-48 font-mono h-fit">
+        <div className="text-cyan-500 text-[10px] uppercase tracking-widest mb-2 border-b border-cyan-900/50 pb-1">
+          Online Players ({players.length})
+        </div>
+        <div className="space-y-1">
+          {players.map(p => (
+            <div key={p.id} className={`text-xs ${p.id === myId ? 'text-cyan-400 font-bold' : 'text-gray-400'}`}>
+              {p.name} <span className="text-[9px] text-gray-600">Lv.{p.level}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

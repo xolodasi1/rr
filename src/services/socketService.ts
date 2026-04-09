@@ -6,8 +6,8 @@ let socket: Socket | null = null;
 export const initSocket = (playerName: string) => {
   if (socket) return socket;
 
-  // In development, connect to the same host
-  socket = io();
+  // Connect using websocket only to prevent polling ghost connections
+  socket = io({ transports: ['websocket'] });
 
   socket.on('connect', () => {
     console.log('Connected to server');

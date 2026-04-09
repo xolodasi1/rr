@@ -53,95 +53,131 @@ export const GameCanvas: React.FC = () => {
     let lastEmitTime = 0;
 
     const render = (time: number) => {
-      // 1. Update local player position
       const state = useGameStore.getState();
       const myId = state.myId;
       const socket = getSocket();
+      const me = myId ? state.players.get(myId) : undefined;
       
-      if (myId && socket) {
-        const me = state.players.get(myId);
-        if (me) {
-          let dx = 0;
-          let dy = 0;
-          let newDir = me.direction;
+      // 1. Update local player position
+      if (myId && socket && me) {
+        let dx = 0;
+        let dy = 0;
+        let newDir = me.direction;
 
-          if (keys.current['w'] || keys.current['arrowup']) { dy -= SPEED; newDir = 'up'; }
-          if (keys.current['s'] || keys.current['arrowdown']) { dy += SPEED; newDir = 'down'; }
-          if (keys.current['a'] || keys.current['arrowleft']) { dx -= SPEED; newDir = 'left'; }
-          if (keys.current['d'] || keys.current['arrowright']) { dx += SPEED; newDir = 'right'; }
+        if (keys.current['w'] || keys.current['arrowup']) { dy -= SPEED; newDir = 'up'; }
+        if (keys.current['s'] || keys.current['arrowdown']) { dy += SPEED; newDir = 'down'; }
+        if (keys.current['a'] || keys.current['arrowleft']) { dx -= SPEED; newDir = 'left'; }
+        if (keys.current['d'] || keys.current['arrowright']) { dx += SPEED; newDir = 'right'; }
 
-          if (dx !== 0 || dy !== 0 || newDir !== me.direction) {
-            const newX = Math.max(20, Math.min(canvas.width - 20, me.x + dx));
-            const newY = Math.max(20, Math.min(canvas.height - 20, me.y + dy));
-            
-            useGameStore.getState().updatePlayer(myId, { x: newX, y: newY, direction: newDir });
-            
-            // Throttle emissions to ~20fps
-            if (time - lastEmitTime > 50) {
-              socket.emit('move', { x: newX, y: newY, direction: newDir });
-              lastEmitTime = time;
-            }
+        if (dx !== 0 || dy !== 0 || newDir !== me.direction) {
+          // Removed hard screen boundaries so player can explore infinite grid
+          const newX = me.x + dx;
+          const newY = me.y + dy;
+          
+          useGameStore.getState().updatePlayer(myId, { x: newX, y: newY, direction: newDir });
+          
+          // Throttle emissions to ~20fps
+          if (time - lastEmitTime > 50) {
+            socket.emit('move', { x: newX, y: newY, direction: newDir });
+            lastEmitTime = time;
           }
         }
       }
 
-      // 2. Clear canvas
-      ctx.fillStyle = '#0a0a12'; // Dark sci-fi background
+      // 2. Camera setup
+      let cameraX = 0;
+      let cameraY = 0;
+      if (me) {
+        // Center camera on player
+        cameraX = me.x - canvas.width / 2;
+        cameraY = me.y - canvas.height / 2;
+      }
+
+      // Clear canvas
+      ctx.fillStyle = '#020205'; // Deep space black
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw grid
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < canvas.width; i += 50) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-      }
-      for (let i = 0; i < canvas.height; i += 50) {
-        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-      }
+      ctx.save();
+      ctx.translate(-cameraX, -cameraY);
 
-      // 3. Draw players
-      const players = Array.from(useGameStore.getState().players.values());
+      // 3. Draw infinite grid
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+      ctx.lineWidth = 2;
+      const gridSize = 100;
+      const startX = Math.floor(cameraX / gridSize) * gridSize;
+      const startY = Math.floor(cameraY / gridSize) * gridSize;
       
-      // Sort by Y so players lower on screen are drawn on top
+      ctx.beginPath();
+      for (let x = startX; x < startX + canvas.width + gridSize; x += gridSize) {
+        ctx.moveTo(x, cameraY);
+        ctx.lineTo(x, cameraY + canvas.height);
+      }
+      for (let y = startY; y < startY + canvas.height + gridSize; y += gridSize) {
+        ctx.moveTo(cameraX, y);
+        ctx.lineTo(cameraX + canvas.width, y);
+      }
+      ctx.stroke();
+
+      // 4. Draw players
+      const players = Array.from(useGameStore.getState().players.values());
       players.sort((a, b) => a.y - b.y);
 
       players.forEach(player => {
         const isMe = player.id === myId;
+        const color = isMe ? '#00ffff' : '#ff0055';
         
-        // Draw attack effect
-        if (player.isAttacking) {
-          ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
-          ctx.beginPath();
-          if (player.direction === 'up') ctx.arc(player.x, player.y - 30, 25, 0, Math.PI * 2);
-          if (player.direction === 'down') ctx.arc(player.x, player.y + 30, 25, 0, Math.PI * 2);
-          if (player.direction === 'left') ctx.arc(player.x - 30, player.y, 25, 0, Math.PI * 2);
-          if (player.direction === 'right') ctx.arc(player.x + 30, player.y, 25, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
         // Draw shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.beginPath();
-        ctx.ellipse(player.x, player.y + 20, 15, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(player.x, player.y + 15, 12, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw character body
-        ctx.fillStyle = isMe ? '#00ffff' : '#ff0055'; // Cyan for me, neon pink for others
-        
-        // Glitch effect for others occasionally
-        if (!isMe && Math.random() > 0.98) {
-          ctx.fillStyle = Math.random() > 0.5 ? '#00ffff' : '#ffffff';
-          ctx.fillRect(player.x - 15 + (Math.random()*10-5), player.y - 20, 30, 40);
-        } else {
-          ctx.fillRect(player.x - 15, player.y - 20, 30, 40);
+        // Draw attack slash
+        if (player.isAttacking) {
+          ctx.beginPath();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 6;
+          ctx.lineCap = 'round';
+          
+          let angle = 0;
+          if (player.direction === 'right') angle = 0;
+          if (player.direction === 'down') angle = Math.PI / 2;
+          if (player.direction === 'left') angle = Math.PI;
+          if (player.direction === 'up') angle = -Math.PI / 2;
+          
+          ctx.arc(player.x, player.y, 35, angle - Math.PI/3, angle + Math.PI/3);
+          
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = color;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
         }
 
-        // Draw direction indicator (visor)
-        ctx.fillStyle = '#ffffff';
-        if (player.direction === 'up') ctx.fillRect(player.x - 10, player.y - 15, 20, 5);
-        if (player.direction === 'down') ctx.fillRect(player.x - 10, player.y - 10, 20, 5);
-        if (player.direction === 'left') ctx.fillRect(player.x - 15, player.y - 10, 5, 20);
-        if (player.direction === 'right') ctx.fillRect(player.x + 10, player.y - 10, 5, 20);
+        // Draw Sci-Fi Player Body (Glowing Ring)
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, 14, 0, Math.PI * 2);
+        ctx.fillStyle = '#050508';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Draw Direction Pointer (Inner Core)
+        ctx.beginPath();
+        let px = player.x;
+        let py = player.y;
+        const offset = 8;
+        if (player.direction === 'up') py -= offset;
+        if (player.direction === 'down') py += offset;
+        if (player.direction === 'left') px -= offset;
+        if (player.direction === 'right') px += offset;
+        
+        ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
 
         // Draw nameplate
         ctx.fillStyle = isMe ? '#00ffff' : '#ffffff';
@@ -150,12 +186,13 @@ export const GameCanvas: React.FC = () => {
         ctx.fillText(`Lv.${player.level} ${player.name}`, player.x, player.y - 30);
 
         // Draw HP bar
-        ctx.fillStyle = '#333';
-        ctx.fillRect(player.x - 20, player.y - 45, 40, 4);
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(player.x - 20, player.y - 45, 40 * (player.hp / player.maxHp), 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(player.x - 20, player.y - 22, 40, 4);
+        ctx.fillStyle = color;
+        ctx.fillRect(player.x - 20, player.y - 22, 40 * (player.hp / player.maxHp), 4);
       });
 
+      ctx.restore();
       requestRef.current = requestAnimationFrame(render);
     };
 
