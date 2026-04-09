@@ -23,12 +23,12 @@ export const Chat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-64 w-80 bg-black/60 backdrop-blur-md border border-cyan-900/50 rounded-lg overflow-hidden font-mono text-xs">
-      <div className="bg-cyan-950/50 px-3 py-1 border-b border-cyan-900/50 text-cyan-400 uppercase tracking-widest text-[10px]">
+    <div className="flex flex-col h-32 w-48 sm:h-48 sm:w-60 md:h-64 md:w-80 bg-black/60 backdrop-blur-md border border-cyan-900/50 rounded-lg overflow-hidden font-mono text-[10px] md:text-xs">
+      <div className="bg-cyan-950/50 px-3 py-1 border-b border-cyan-900/50 text-cyan-400 uppercase tracking-widest text-[8px] md:text-[10px]">
         System Comms
       </div>
       
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-cyan-900">
+      <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-1 md:space-y-2 scrollbar-thin scrollbar-thumb-cyan-900">
         {messages.map((msg, i) => (
           <div key={i} className={`break-words ${msg.isSystem ? 'text-yellow-400/80 italic' : 'text-gray-300'}`}>
             {!msg.isSystem && <span className="text-cyan-400 font-bold mr-2">[{msg.sender}]</span>}
@@ -38,8 +38,8 @@ export const Chat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-2 border-t border-cyan-900/50 bg-black/40 flex">
-        <span className="text-cyan-500 mr-2">{'>'}</span>
+      <form onSubmit={handleSubmit} className="p-1 md:p-2 border-t border-cyan-900/50 bg-black/40 flex">
+        <span className="text-cyan-500 mr-1 md:mr-2">{'>'}</span>
         <input
           type="text"
           value={input}

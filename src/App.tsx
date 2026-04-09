@@ -26,12 +26,12 @@ export default function App() {
         <div className="relative w-full h-full">
           <GameCanvas />
           <HUD />
-          <div className="absolute bottom-4 left-4">
+          <div className="absolute top-32 left-4 md:top-auto md:bottom-4 md:left-4 z-40 pointer-events-auto hidden sm:block">
             <Chat />
           </div>
           
           {/* Controls hint */}
-          <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] text-cyan-800/60 uppercase tracking-widest pointer-events-none">
+          <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] text-cyan-800/60 uppercase tracking-widest pointer-events-none hidden md:block">
             <p>WASD / Arrows to Move</p>
             <p>Space to Attack</p>
           </div>

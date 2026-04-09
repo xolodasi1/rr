@@ -11,22 +11,26 @@ export const GameCanvas: React.FC = () => {
   // Local state for smooth movement
   const keys = useRef<{ [key: string]: boolean }>({});
   
+  const handleAttack = () => {
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('attack');
+      const myId = useGameStore.getState().myId;
+      if (myId) {
+        useGameStore.getState().updatePlayer(myId, { isAttacking: true });
+        setTimeout(() => {
+          useGameStore.getState().updatePlayer(myId, { isAttacking: false });
+        }, 300);
+      }
+    }
+  };
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keys.current[e.key.toLowerCase()] = true;
       if (e.key === ' ') {
         e.preventDefault(); // Prevent scrolling
-        const socket = getSocket();
-        if (socket) {
-          socket.emit('attack');
-          const myId = useGameStore.getState().myId;
-          if (myId) {
-            useGameStore.getState().updatePlayer(myId, { isAttacking: true });
-            setTimeout(() => {
-              useGameStore.getState().updatePlayer(myId, { isAttacking: false });
-            }, 300);
-          }
-        }
+        handleAttack();
       }
     };
     
@@ -204,16 +208,60 @@ export const GameCanvas: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-[#050508] border border-cyan-900/50 rounded-lg overflow-hidden shadow-[0_0_30px_rgba(0,255,255,0.1)]">
+    <div className="relative w-full h-full bg-[#050508] border border-cyan-900/50 rounded-lg overflow-hidden shadow-[0_0_30px_rgba(0,255,255,0.1)] touch-none">
       <canvas 
         ref={canvasRef} 
         width={1024} 
         height={768}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
       />
       
       {/* Scanline overlay */}
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
+
+      {/* Mobile Controls Overlay */}
+      <div className="absolute inset-0 pointer-events-none md:hidden z-50">
+        {/* D-Pad */}
+        <div className="absolute bottom-10 left-6 w-32 h-32 pointer-events-auto opacity-70">
+          <div className="relative w-full h-full bg-cyan-900/20 rounded-full border border-cyan-500/30">
+            <button 
+              onPointerDown={() => keys.current['w'] = true} 
+              onPointerUp={() => keys.current['w'] = false}
+              onPointerLeave={() => keys.current['w'] = false}
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-cyan-800/50 rounded-t-full active:bg-cyan-500/80 touch-none" 
+            />
+            <button 
+              onPointerDown={() => keys.current['s'] = true} 
+              onPointerUp={() => keys.current['s'] = false}
+              onPointerLeave={() => keys.current['s'] = false}
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-cyan-800/50 rounded-b-full active:bg-cyan-500/80 touch-none" 
+            />
+            <button 
+              onPointerDown={() => keys.current['a'] = true} 
+              onPointerUp={() => keys.current['a'] = false}
+              onPointerLeave={() => keys.current['a'] = false}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 bg-cyan-800/50 rounded-l-full active:bg-cyan-500/80 touch-none" 
+            />
+            <button 
+              onPointerDown={() => keys.current['d'] = true} 
+              onPointerUp={() => keys.current['d'] = false}
+              onPointerLeave={() => keys.current['d'] = false}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 bg-cyan-800/50 rounded-r-full active:bg-cyan-500/80 touch-none" 
+            />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-cyan-500/50 rounded-full pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Attack Button */}
+        <div className="absolute bottom-12 right-6 pointer-events-auto opacity-70">
+          <button 
+            onPointerDown={handleAttack} 
+            className="w-20 h-20 bg-red-900/40 rounded-full border-2 border-red-500/50 flex items-center justify-center text-red-500 font-bold active:bg-red-500/80 active:text-white shadow-[0_0_15px_rgba(255,0,0,0.3)] touch-none"
+          >
+            ATK
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
