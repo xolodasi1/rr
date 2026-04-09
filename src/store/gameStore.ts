@@ -26,10 +26,11 @@ export interface WorldInfo {
 
 export interface EnvironmentObject {
   id: string;
-  type: 'tree' | 'rock' | 'bush' | 'altar';
+  type: 'tree' | 'rock' | 'bush' | 'altar' | 'river' | 'house' | 'path' | 'npc';
   x: number;
   y: number;
   radius: number;
+  points?: {x: number, y: number}[];
 }
 
 export interface Mob {

@@ -20,10 +20,11 @@ interface Player {
 
 interface EnvironmentObject {
   id: string;
-  type: 'tree' | 'rock' | 'bush' | 'altar';
+  type: 'tree' | 'rock' | 'bush' | 'altar' | 'river' | 'house' | 'path' | 'npc';
   x: number;
   y: number;
   radius: number;
+  points?: {x: number, y: number}[];
 }
 
 interface Mob {
@@ -48,18 +49,58 @@ const mobs = new Map<string, Mob>();
 
 function generateEnvironment(): EnvironmentObject[] {
   const env: EnvironmentObject[] = [];
-  // Generate Altar in center
-  env.push({ id: 'altar_1', type: 'altar', x: 1000, y: 1000, radius: 50 });
   
-  // Generate trees and rocks
-  for (let i = 0; i < 250; i++) {
+  // Generate Village Area (Center)
+  // Village Paths
+  env.push({ id: 'path_main', type: 'path', x: 1000, y: 1000, radius: 250 });
+  env.push({ id: 'path_branch1', type: 'path', x: 800, y: 1000, radius: 100 });
+  env.push({ id: 'path_branch2', type: 'path', x: 1200, y: 1000, radius: 100 });
+  
+  // Altar in the center of the village
+  env.push({ id: 'altar_1', type: 'altar', x: 1000, y: 1000, radius: 40 });
+  
+  // Houses around the village
+  env.push({ id: 'house_1', type: 'house', x: 850, y: 850, radius: 60 });
+  env.push({ id: 'house_2', type: 'house', x: 1150, y: 850, radius: 60 });
+  env.push({ id: 'house_3', type: 'house', x: 850, y: 1150, radius: 60 });
+  env.push({ id: 'house_4', type: 'house', x: 1150, y: 1150, radius: 60 });
+  env.push({ id: 'house_5', type: 'house', x: 1000, y: 750, radius: 70 });
+
+  // NPCs in the village
+  env.push({ id: 'npc_1', type: 'npc', x: 950, y: 950, radius: 15 });
+  env.push({ id: 'npc_2', type: 'npc', x: 1050, y: 1050, radius: 15 });
+  env.push({ id: 'npc_3', type: 'npc', x: 900, y: 1000, radius: 15 });
+  env.push({ id: 'npc_4', type: 'npc', x: 1100, y: 950, radius: 15 });
+  
+  // Generate Rivers
+  for (let r = 0; r < 2; r++) {
+    const riverPoints = [];
+    let currentX = Math.random() * 2000;
+    let currentY = Math.random() * 2000;
+    
+    // Random direction for the river
+    const angle = Math.random() * Math.PI * 2;
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+
+    for (let i = 0; i < 15; i++) {
+      riverPoints.push({ x: currentX, y: currentY });
+      currentX += dx * 150 + (Math.random() - 0.5) * 100;
+      currentY += dy * 150 + (Math.random() - 0.5) * 100;
+    }
+    env.push({ id: `river_${r}`, type: 'river', x: 0, y: 0, radius: 30 + Math.random() * 20, points: riverPoints });
+  }
+
+  // Generate trees and rocks (Forest outside village)
+  for (let i = 0; i < 300; i++) {
     const x = Math.random() * 2000;
     const y = Math.random() * 2000;
-    // Don't spawn too close to altar
-    if (Math.hypot(x - 1000, y - 1000) < 150) continue;
     
-    const type = Math.random() > 0.8 ? 'rock' : (Math.random() > 0.5 ? 'tree' : 'bush');
-    const radius = type === 'tree' ? 25 : (type === 'rock' ? 15 : 10);
+    // Don't spawn inside the village radius
+    if (Math.hypot(x - 1000, y - 1000) < 350) continue;
+    
+    const type = Math.random() > 0.85 ? 'rock' : (Math.random() > 0.4 ? 'tree' : 'bush');
+    const radius = type === 'tree' ? 35 : (type === 'rock' ? 20 : 15);
     env.push({ id: `env_${i}`, type, x, y, radius });
   }
   return env;

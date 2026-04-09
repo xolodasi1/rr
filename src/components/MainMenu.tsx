@@ -34,22 +34,23 @@ export const MainMenu: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#050508] flex items-center justify-center z-50 font-mono">
+    <div className="fixed inset-0 bg-[#a3c995] flex items-center justify-center z-50 font-sans">
       {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-900/20 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] bg-white/30 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-green-400/20 rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative bg-black/40 backdrop-blur-xl border border-cyan-500/30 p-8 rounded-2xl w-[450px] shadow-[0_0_50px_rgba(0,255,255,0.1)]">
+      <div className="relative bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-2xl w-[450px] shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2 tracking-tighter">
-            PROJECT: AINCRAD
+          <h1 className="text-4xl font-bold text-gray-800 mb-2 tracking-widest drop-shadow-sm">
+            AINCRAD ONLINE
           </h1>
-          <p className="text-cyan-600/80 text-xs uppercase tracking-[0.3em]">Virtual Reality MMORPG</p>
+          <p className="text-gray-600 text-xs font-bold uppercase tracking-[0.3em]">Virtual Reality MMORPG</p>
         </div>
 
         {!isConnected && (
-          <div className="text-center text-red-400 text-xs uppercase tracking-widest mb-4 animate-pulse">
+          <div className="text-center text-orange-500 font-bold text-xs uppercase tracking-widest mb-4 animate-pulse">
             Connecting to master server...
           </div>
         )}
@@ -57,14 +58,14 @@ export const MainMenu: React.FC = () => {
         {step === 'NAME' && (
           <form onSubmit={handleNameSubmit} className="space-y-6">
             <div>
-              <label className="block text-cyan-500/80 text-[10px] uppercase tracking-widest mb-2">
+              <label className="block text-gray-700 font-bold text-[10px] uppercase tracking-widest mb-2">
                 Character Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-cyan-950/20 border border-cyan-800/50 rounded-lg px-4 py-3 text-cyan-100 outline-none focus:border-cyan-400 focus:bg-cyan-950/40 transition-all"
+                className="w-full bg-white/50 border border-white/60 rounded-lg px-4 py-3 text-gray-800 font-bold outline-none focus:border-green-400 focus:bg-white/70 transition-all placeholder-gray-500"
                 placeholder="Enter your name..."
                 maxLength={16}
                 autoFocus
@@ -74,9 +75,9 @@ export const MainMenu: React.FC = () => {
             <button
               type="submit"
               disabled={!name.trim() || !isConnected}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-black font-bold uppercase tracking-widest py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)]"
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold uppercase tracking-widest py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_15px_rgba(76,175,80,0.4)] hover:shadow-[0_6px_20px_rgba(76,175,80,0.6)]"
             >
-              Authenticate
+              Link Start
             </button>
           </form>
         )}
@@ -84,22 +85,22 @@ export const MainMenu: React.FC = () => {
         {step === 'WORLDS' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-cyan-500/80 text-[10px] uppercase tracking-widest">Select World</span>
+              <span className="text-gray-700 font-bold text-[10px] uppercase tracking-widest">Select World</span>
               <button 
                 onClick={() => setIsCreating(!isCreating)}
-                className="text-cyan-400 text-[10px] uppercase tracking-widest hover:text-white transition-colors"
+                className="text-green-600 font-bold text-[10px] uppercase tracking-widest hover:text-green-800 transition-colors"
               >
                 {isCreating ? 'Cancel' : '+ Create World'}
               </button>
             </div>
 
             {isCreating && (
-              <form onSubmit={handleCreateWorld} className="mb-6 p-4 border border-cyan-800/50 rounded-lg bg-cyan-950/20">
+              <form onSubmit={handleCreateWorld} className="mb-6 p-4 border border-white/60 rounded-lg bg-white/40">
                 <input
                   type="text"
                   value={newWorldName}
                   onChange={(e) => setNewWorldName(e.target.value)}
-                  className="w-full bg-black/50 border border-cyan-800/50 rounded px-3 py-2 text-cyan-100 outline-none focus:border-cyan-400 text-sm mb-3"
+                  className="w-full bg-white/60 border border-white/80 rounded px-3 py-2 text-gray-800 font-bold outline-none focus:border-green-400 text-sm mb-3 placeholder-gray-500"
                   placeholder="World Name..."
                   maxLength={20}
                   autoFocus
@@ -107,30 +108,30 @@ export const MainMenu: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!newWorldName.trim()}
-                  className="w-full bg-cyan-800 hover:bg-cyan-600 text-white text-xs uppercase tracking-widest py-2 rounded transition-all disabled:opacity-50"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold text-xs uppercase tracking-widest py-2 rounded transition-all disabled:opacity-50"
                 >
                   Confirm Creation
                 </button>
               </form>
             )}
 
-            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-900 pr-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 pr-2">
               {worlds.length === 0 ? (
-                <div className="text-center text-gray-500 text-xs py-4">No worlds found. Create one!</div>
+                <div className="text-center text-gray-500 font-bold text-xs py-4">No worlds found. Create one!</div>
               ) : (
                 worlds.map(world => (
                   <button
                     key={world.id}
                     onClick={() => handleJoinWorld(world.id, world.name)}
-                    className="w-full flex items-center justify-between p-4 border border-cyan-900/50 rounded-lg hover:bg-cyan-900/30 hover:border-cyan-500/50 transition-all group text-left"
+                    className="w-full flex items-center justify-between p-4 border border-white/50 bg-white/30 rounded-lg hover:bg-white/60 hover:border-green-400/50 transition-all group text-left shadow-sm"
                   >
                     <div>
-                      <div className="text-cyan-100 font-bold group-hover:text-white transition-colors">{world.name}</div>
-                      <div className="text-[10px] text-cyan-700 uppercase tracking-widest mt-1">ID: {world.id}</div>
+                      <div className="text-gray-800 font-bold group-hover:text-green-700 transition-colors">{world.name}</div>
+                      <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">ID: {world.id}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-cyan-400 text-xs">{world.playerCount} Players</div>
-                      <div className="text-[9px] text-cyan-600 uppercase tracking-widest mt-1 group-hover:text-cyan-400">Join &rarr;</div>
+                      <div className="text-green-600 font-bold text-xs">{world.playerCount} Players</div>
+                      <div className="text-[9px] text-green-700 font-bold uppercase tracking-widest mt-1 group-hover:text-green-800">Join &rarr;</div>
                     </div>
                   </button>
                 ))
@@ -139,14 +140,14 @@ export const MainMenu: React.FC = () => {
             
             <button
               onClick={() => setStep('NAME')}
-              className="w-full border border-cyan-900/50 hover:bg-cyan-900/20 text-cyan-500 text-xs uppercase tracking-widest py-2 rounded-lg transition-all mt-4"
+              className="w-full border border-white/60 hover:bg-white/50 text-gray-600 font-bold text-xs uppercase tracking-widest py-2 rounded-lg transition-all mt-4"
             >
               &larr; Back
             </button>
           </div>
         )}
 
-        <div className="mt-8 text-center text-[10px] text-cyan-800/60 uppercase tracking-widest">
+        <div className="mt-8 text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
           Warning: Logout sequence disabled
         </div>
       </div>

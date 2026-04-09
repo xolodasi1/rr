@@ -19,7 +19,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-black text-white font-sans selection:bg-cyan-500/30">
+    <div className="w-screen h-screen overflow-hidden bg-[#a3c995] text-gray-800 font-sans selection:bg-green-500/30">
       {!currentWorld ? (
         <MainMenu />
       ) : (
@@ -31,8 +31,9 @@ export default function App() {
           </div>
           
           {/* Controls hint */}
-          <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] text-cyan-800/60 uppercase tracking-widest pointer-events-none hidden md:block">
+          <div className="absolute bottom-4 right-4 text-right font-mono text-[10px] text-gray-600/80 uppercase tracking-widest pointer-events-none hidden md:block">
             <p>WASD / Arrows to Move</p>
+            <p>Shift to Sprint</p>
             <p>Space to Attack</p>
           </div>
         </div>
