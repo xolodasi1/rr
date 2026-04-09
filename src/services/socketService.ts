@@ -67,6 +67,10 @@ export const initSocket = () => {
     useGameStore.getState().addChatMessage(msg);
   });
 
+  socket.on('topPlayers', (players) => {
+    useGameStore.getState().setTopPlayers(players);
+  });
+
   return socket;
 };
 
@@ -79,6 +83,13 @@ export const joinWorld = (name: string, worldId: string) => {
 export const createWorld = (name: string) => {
   if (socket) {
     socket.emit('createWorld', name);
+  }
+};
+
+export const leaveWorld = () => {
+  if (socket) {
+    socket.emit('leaveWorld');
+    useGameStore.getState().leaveWorld();
   }
 };
 

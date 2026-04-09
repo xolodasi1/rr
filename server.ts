@@ -16,6 +16,7 @@ interface Player {
   maxHp: number;
   direction: 'up' | 'down' | 'left' | 'right';
   isAttacking: boolean;
+  connectedAt: number;
 }
 
 interface EnvironmentObject {
@@ -168,6 +169,7 @@ async function startServer() {
         maxHp: 100,
         direction: 'up',
         isAttacking: false,
+        connectedAt: Date.now(),
       };
       players.set(socket.id, newPlayer);
       
@@ -276,7 +278,29 @@ async function startServer() {
         io.emit("worldsList", getWorldsList()); // Update counts
       }
     });
+
+    socket.on("leaveWorld", () => {
+      const player = players.get(socket.id);
+      if (player) {
+        io.to(player.worldId).emit("chatMessage", { sender: "System", text: `${player.name} has disconnected.`, isSystem: true });
+        players.delete(socket.id);
+        socket.leave(player.worldId);
+        io.to(player.worldId).emit("playerLeft", socket.id);
+        io.emit("worldsList", getWorldsList());
+      }
+    });
   });
+
+  // Broadcast top players every 5 seconds
+  setInterval(() => {
+    const allPlayers = Array.from(players.values());
+    const top = allPlayers.map(p => ({
+      name: p.name,
+      time: Math.floor((Date.now() - p.connectedAt) / 1000)
+    })).sort((a, b) => b.time - a.time).slice(0, 10);
+    
+    io.emit('topPlayers', top);
+  }, 5000);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

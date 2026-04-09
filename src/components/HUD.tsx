@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
+import { leaveWorld } from '../services/socketService';
 
 export const HUD: React.FC = () => {
   const myId = useGameStore(state => state.myId);
@@ -16,7 +17,7 @@ export const HUD: React.FC = () => {
 
   return (
     <div className="absolute top-4 left-4 pointer-events-none flex flex-col md:flex-row gap-2 md:gap-4 z-40">
-      <div className="bg-white/30 backdrop-blur-md border border-white/50 rounded-lg p-3 md:p-4 w-48 md:w-64 font-sans shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+      <div className="bg-white/30 backdrop-blur-md border border-white/50 rounded-lg p-3 md:p-4 w-48 md:w-64 font-sans shadow-[0_4px_15px_rgba(0,0,0,0.1)] pointer-events-auto">
         <div className="flex justify-between items-center mb-2">
           <span className="text-gray-800 font-bold uppercase tracking-wider text-sm md:text-base">{me.name}</span>
           <span className="text-[10px] md:text-xs text-gray-600 font-bold">Lv.{me.level}</span>
@@ -59,6 +60,14 @@ export const HUD: React.FC = () => {
             {currentWorld?.name || 'UNKNOWN ZONE'}
           </div>
         </div>
+
+        {/* Leave Server Button */}
+        <button 
+          onClick={leaveWorld}
+          className="mt-3 w-full bg-red-500/80 hover:bg-red-600 text-white font-bold text-[10px] md:text-xs uppercase tracking-widest py-1.5 rounded-lg transition-all shadow-[0_4px_15px_rgba(244,67,54,0.4)]"
+        >
+          Log Out
+        </button>
       </div>
       
       {/* Online Players List - Hidden on very small screens to save space */}

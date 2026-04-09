@@ -54,6 +54,7 @@ interface GameState {
   maxStamina: number;
   environment: EnvironmentObject[];
   mobs: Map<string, Mob>;
+  topPlayers: {name: string, time: number}[];
   
   setMyId: (id: string) => void;
   setConnected: (status: boolean) => void;
@@ -62,6 +63,8 @@ interface GameState {
   toggleChat: () => void;
   setStamina: (stamina: number) => void;
   setEnvironment: (env: EnvironmentObject[]) => void;
+  setTopPlayers: (players: {name: string, time: number}[]) => void;
+  leaveWorld: () => void;
   
   initPlayers: (playersList: Player[]) => void;
   addPlayer: (player: Player) => void;
@@ -86,6 +89,7 @@ export const useGameStore = create<GameState>((set) => ({
   maxStamina: 100,
   environment: [],
   mobs: new Map(),
+  topPlayers: [],
   
   setMyId: (id) => set({ myId: id }),
   setConnected: (status) => set({ isConnected: status }),
@@ -94,6 +98,8 @@ export const useGameStore = create<GameState>((set) => ({
   toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
   setStamina: (stamina) => set({ myStamina: stamina }),
   setEnvironment: (env) => set({ environment: env }),
+  setTopPlayers: (players) => set({ topPlayers: players }),
+  leaveWorld: () => set({ currentWorld: null, players: new Map(), environment: [], chatMessages: [], mobs: new Map() }),
   
   initPlayers: (playersList) => set((state) => {
     const newMap = new Map();

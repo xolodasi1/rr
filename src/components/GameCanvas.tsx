@@ -427,13 +427,28 @@ export const GameCanvas: React.FC = () => {
         if (p.y < cameraY) p.y = cameraY + canvas.height;
         if (p.y > cameraY + canvas.height) p.y = cameraY;
 
-        const alpha = (Math.sin(p.life) + 1) / 2 * 0.6; // Pulsing effect
+        const alpha = (Math.sin(p.life) + 1) / 2 * 0.8; // Pulsing effect
         
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 200, ${alpha})`;
+        ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200, 255, 200, ${alpha * 0.5})`;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#aaffaa';
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Add soft bloom/flare effect over the whole screen
+      ctx.globalCompositeOperation = 'screen';
+      const screenGradient = ctx.createRadialGradient(
+        cameraX + canvas.width / 2, cameraY + canvas.height / 2, 0,
+        cameraX + canvas.width / 2, cameraY + canvas.height / 2, canvas.width
+      );
+      screenGradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+      screenGradient.addColorStop(1, 'rgba(150, 255, 150, 0.15)');
+      ctx.fillStyle = screenGradient;
+      ctx.fillRect(cameraX, cameraY, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'source-over';
 
       // 7. Light Rays (Sunlight through trees)
