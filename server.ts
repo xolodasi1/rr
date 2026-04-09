@@ -116,11 +116,58 @@ async function startServer() {
     });
 
     socket.on("attack", () => {
-      const player = players.get(socket.id);
-      if (player) {
-        player.isAttacking = true;
-        socket.to(player.worldId).emit("playerAttacked", { id: socket.id });
+      const attacker = players.get(socket.id);
+      if (attacker && !attacker.isAttacking) {
+        attacker.isAttacking = true;
+        socket.to(attacker.worldId).emit("playerAttacked", { id: socket.id });
         
+        // Calculate damage
+        const ATTACK_RANGE = 60;
+        const DAMAGE = 15;
+
+        for (const [targetId, target] of players.entries()) {
+          if (targetId !== socket.id && target.worldId === attacker.worldId) {
+            const dx = target.x - attacker.x;
+            const dy = target.y - attacker.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Simple directional check
+            let isFacing = false;
+            if (attacker.direction === 'up' && dy < 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'down' && dy > 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'left' && dx < 0 && Math.abs(dy) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'right' && dx > 0 && Math.abs(dy) < ATTACK_RANGE) isFacing = true;
+
+            if (distance < ATTACK_RANGE && isFacing) {
+              target.hp -= DAMAGE;
+              if (target.hp <= 0) {
+                target.hp = target.maxHp; // Respawn
+                target.x = Math.floor(Math.random() * 800) + 100;
+                target.y = Math.floor(Math.random() * 600) + 100;
+                
+                io.to(attacker.worldId).emit("chatMessage", { 
+                  sender: "System", 
+                  text: `${target.name} was defeated by ${attacker.name}.`, 
+                  isSystem: true 
+                });
+                
+                // Notify target of respawn/death
+                io.to(attacker.worldId).emit("playerDied", { 
+                  id: targetId, 
+                  hp: target.hp, 
+                  x: target.x, 
+                  y: target.y 
+                });
+              } else {
+                io.to(attacker.worldId).emit("playerHit", { 
+                  id: targetId, 
+                  hp: target.hp 
+                });
+              }
+            }
+          }
+        }
+
         // Reset attack state after a short delay
         setTimeout(() => {
           if (players.has(socket.id)) {

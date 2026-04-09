@@ -26,7 +26,7 @@ export default function App() {
         <div className="relative w-full h-full">
           <GameCanvas />
           <HUD />
-          <div className="absolute top-32 left-4 md:top-auto md:bottom-4 md:left-4 z-40 pointer-events-auto hidden sm:block">
+          <div className="absolute top-32 left-4 md:top-auto md:bottom-4 md:left-4 z-40 pointer-events-auto">
             <Chat />
           </div>
           

@@ -31,11 +31,13 @@ interface GameState {
   isConnected: boolean;
   worlds: WorldInfo[];
   currentWorld: WorldInfo | null;
+  isChatOpen: boolean;
   
   setMyId: (id: string) => void;
   setConnected: (status: boolean) => void;
   setWorlds: (worlds: WorldInfo[]) => void;
   setCurrentWorld: (world: WorldInfo | null) => void;
+  toggleChat: () => void;
   
   initPlayers: (playersList: Player[]) => void;
   addPlayer: (player: Player) => void;
@@ -51,11 +53,13 @@ export const useGameStore = create<GameState>((set) => ({
   isConnected: false,
   worlds: [],
   currentWorld: null,
+  isChatOpen: true,
   
   setMyId: (id) => set({ myId: id }),
   setConnected: (status) => set({ isConnected: status }),
   setWorlds: (worlds) => set({ worlds }),
   setCurrentWorld: (world) => set({ currentWorld: world }),
+  toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
   
   initPlayers: (playersList) => set((state) => {
     const newMap = new Map();

@@ -51,6 +51,14 @@ export const initSocket = () => {
     }, 300);
   });
 
+  socket.on('playerHit', (data) => {
+    useGameStore.getState().updatePlayer(data.id, { hp: data.hp });
+  });
+
+  socket.on('playerDied', (data) => {
+    useGameStore.getState().updatePlayer(data.id, { hp: data.hp, x: data.x, y: data.y });
+  });
+
   socket.on('chatMessage', (msg) => {
     useGameStore.getState().addChatMessage(msg);
   });
