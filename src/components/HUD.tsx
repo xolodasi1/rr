@@ -5,6 +5,7 @@ export const HUD: React.FC = () => {
   const myId = useGameStore(state => state.myId);
   const playersMap = useGameStore(state => state.players);
   const isConnected = useGameStore(state => state.isConnected);
+  const currentWorld = useGameStore(state => state.currentWorld);
 
   const players = Array.from(playersMap.values());
   const me = myId ? playersMap.get(myId) : null;
@@ -38,8 +39,8 @@ export const HUD: React.FC = () => {
           <div className={`px-2 py-1 rounded border ${isConnected ? 'border-cyan-500/50 text-cyan-400' : 'border-red-500/50 text-red-400'}`}>
             {isConnected ? 'LINK START' : 'OFFLINE'}
           </div>
-          <div className="px-2 py-1 rounded border border-gray-700 text-gray-400">
-            SAFE ZONE
+          <div className="px-2 py-1 rounded border border-gray-700 text-gray-400 truncate max-w-[120px]">
+            {currentWorld?.name || 'UNKNOWN ZONE'}
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { useGameStore } from '../store/gameStore';
 
 let socket: Socket | null = null;
 
-export const initSocket = (playerName: string) => {
+export const initSocket = () => {
   if (socket) return socket;
 
   // Connect using websocket only to prevent polling ghost connections
@@ -13,12 +13,15 @@ export const initSocket = (playerName: string) => {
     console.log('Connected to server');
     useGameStore.getState().setConnected(true);
     useGameStore.getState().setMyId(socket!.id as string);
-    socket!.emit('join', playerName);
   });
 
   socket.on('disconnect', () => {
     console.log('Disconnected from server');
     useGameStore.getState().setConnected(false);
+  });
+
+  socket.on('worldsList', (worlds) => {
+    useGameStore.getState().setWorlds(worlds);
   });
 
   socket.on('init', (players) => {
@@ -53,6 +56,18 @@ export const initSocket = (playerName: string) => {
   });
 
   return socket;
+};
+
+export const joinWorld = (name: string, worldId: string) => {
+  if (socket) {
+    socket.emit('joinWorld', { name, worldId });
+  }
+};
+
+export const createWorld = (name: string) => {
+  if (socket) {
+    socket.emit('createWorld', name);
+  }
 };
 
 export const getSocket = () => socket;

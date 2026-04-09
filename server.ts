@@ -7,6 +7,7 @@ import path from "path";
 // --- Game State ---
 interface Player {
   id: string;
+  worldId: string;
   x: number;
   y: number;
   name: string;
@@ -17,7 +18,28 @@ interface Player {
   isAttacking: boolean;
 }
 
+interface World {
+  id: string;
+  name: string;
+}
+
 const players = new Map<string, Player>();
+const worlds = new Map<string, World>();
+
+// Default world
+worlds.set('floor-1', { id: 'floor-1', name: 'Aincrad - Floor 1' });
+
+function getWorldsList() {
+  const list = [];
+  for (const world of worlds.values()) {
+    let count = 0;
+    for (const p of players.values()) {
+      if (p.worldId === world.id) count++;
+    }
+    list.push({ ...world, playerCount: count });
+  }
+  return list;
+}
 
 async function startServer() {
   const app = express();
@@ -37,13 +59,26 @@ async function startServer() {
 
   // Socket.io logic
   io.on("connection", (socket) => {
-    console.log(`Player connected: ${socket.id}`);
+    console.log(`Client connected: ${socket.id}`);
 
-    socket.on("join", (name: string) => {
-      if (players.has(socket.id)) return; // Prevent duplicate joins
-      
+    // Send initial worlds list
+    socket.emit("worldsList", getWorldsList());
+
+    socket.on("createWorld", (name: string) => {
+      const id = 'world_' + Math.random().toString(36).substring(2, 9);
+      worlds.set(id, { id, name });
+      io.emit("worldsList", getWorldsList());
+    });
+
+    socket.on("joinWorld", (data: { name: string, worldId: string }) => {
+      const { name, worldId } = data;
+      if (!worlds.has(worldId) || players.has(socket.id)) return;
+
+      socket.join(worldId);
+
       const newPlayer: Player = {
         id: socket.id,
+        worldId,
         name: name || `Player_${Math.floor(Math.random() * 1000)}`,
         x: Math.floor(Math.random() * 800) + 100,
         y: Math.floor(Math.random() * 600) + 100,
@@ -55,14 +90,18 @@ async function startServer() {
       };
       players.set(socket.id, newPlayer);
       
-      // Send current state to the new player
-      socket.emit("init", Array.from(players.values()));
+      // Send current state to the new player (only players in this world)
+      const worldPlayers = Array.from(players.values()).filter(p => p.worldId === worldId);
+      socket.emit("init", worldPlayers);
       
-      // Broadcast new player to others
-      socket.broadcast.emit("playerJoined", newPlayer);
+      // Broadcast new player to others in the world
+      socket.to(worldId).emit("playerJoined", newPlayer);
       
       // System chat message
-      io.emit("chatMessage", { sender: "System", text: `${newPlayer.name} has entered the simulation.`, isSystem: true });
+      io.to(worldId).emit("chatMessage", { sender: "System", text: `${newPlayer.name} has linked to ${worlds.get(worldId)?.name}.`, isSystem: true });
+      
+      // Update world counts for everyone
+      io.emit("worldsList", getWorldsList());
     });
 
     socket.on("move", (data: { x: number, y: number, direction: 'up' | 'down' | 'left' | 'right' }) => {
@@ -71,8 +110,8 @@ async function startServer() {
         player.x = data.x;
         player.y = data.y;
         player.direction = data.direction;
-        // Broadcast movement to others
-        socket.broadcast.emit("playerMoved", { id: socket.id, x: data.x, y: data.y, direction: data.direction });
+        // Broadcast movement to others in the same world
+        socket.to(player.worldId).emit("playerMoved", { id: socket.id, x: data.x, y: data.y, direction: data.direction });
       }
     });
 
@@ -80,7 +119,7 @@ async function startServer() {
       const player = players.get(socket.id);
       if (player) {
         player.isAttacking = true;
-        socket.broadcast.emit("playerAttacked", { id: socket.id });
+        socket.to(player.worldId).emit("playerAttacked", { id: socket.id });
         
         // Reset attack state after a short delay
         setTimeout(() => {
@@ -94,17 +133,18 @@ async function startServer() {
     socket.on("chatMessage", (text: string) => {
       const player = players.get(socket.id);
       if (player) {
-        io.emit("chatMessage", { sender: player.name, text, isSystem: false });
+        io.to(player.worldId).emit("chatMessage", { sender: player.name, text, isSystem: false });
       }
     });
 
     socket.on("disconnect", () => {
-      console.log(`Player disconnected: ${socket.id}`);
+      console.log(`Client disconnected: ${socket.id}`);
       const player = players.get(socket.id);
       if (player) {
-        io.emit("chatMessage", { sender: "System", text: `${player.name} has disconnected.`, isSystem: true });
+        io.to(player.worldId).emit("chatMessage", { sender: "System", text: `${player.name} has disconnected.`, isSystem: true });
         players.delete(socket.id);
-        io.emit("playerLeft", socket.id);
+        io.to(player.worldId).emit("playerLeft", socket.id);
+        io.emit("worldsList", getWorldsList()); // Update counts
       }
     });
   });

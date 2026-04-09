@@ -1,34 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Login } from './components/Login';
+import React, { useEffect } from 'react';
+import { MainMenu } from './components/MainMenu';
 import { GameCanvas } from './components/GameCanvas';
 import { HUD } from './components/HUD';
 import { Chat } from './components/Chat';
 import { initSocket, disconnectSocket } from './services/socketService';
+import { useGameStore } from './store/gameStore';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [playerName, setPlayerName] = useState('');
-
-  const handleLogin = (name: string) => {
-    setPlayerName(name);
-    setIsLoggedIn(true);
-  };
+  const currentWorld = useGameStore(state => state.currentWorld);
 
   useEffect(() => {
-    if (isLoggedIn && playerName) {
-      initSocket(playerName);
-    }
+    // Initialize socket immediately to fetch server list
+    initSocket();
+    
     return () => {
-      if (isLoggedIn) {
-        disconnectSocket();
-      }
+      disconnectSocket();
     };
-  }, [isLoggedIn, playerName]);
+  }, []);
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-black text-white font-sans selection:bg-cyan-500/30">
-      {!isLoggedIn ? (
-        <Login onLogin={handleLogin} />
+      {!currentWorld ? (
+        <MainMenu />
       ) : (
         <div className="relative w-full h-full">
           <GameCanvas />

@@ -18,13 +18,25 @@ export interface ChatMessage {
   isSystem: boolean;
 }
 
+export interface WorldInfo {
+  id: string;
+  name: string;
+  playerCount: number;
+}
+
 interface GameState {
   players: Map<string, Player>;
   myId: string | null;
   chatMessages: ChatMessage[];
   isConnected: boolean;
+  worlds: WorldInfo[];
+  currentWorld: WorldInfo | null;
+  
   setMyId: (id: string) => void;
   setConnected: (status: boolean) => void;
+  setWorlds: (worlds: WorldInfo[]) => void;
+  setCurrentWorld: (world: WorldInfo | null) => void;
+  
   initPlayers: (playersList: Player[]) => void;
   addPlayer: (player: Player) => void;
   removePlayer: (id: string) => void;
@@ -37,9 +49,13 @@ export const useGameStore = create<GameState>((set) => ({
   myId: null,
   chatMessages: [],
   isConnected: false,
+  worlds: [],
+  currentWorld: null,
   
   setMyId: (id) => set({ myId: id }),
   setConnected: (status) => set({ isConnected: status }),
+  setWorlds: (worlds) => set({ worlds }),
+  setCurrentWorld: (world) => set({ currentWorld: world }),
   
   initPlayers: (playersList) => set((state) => {
     const newMap = new Map();
