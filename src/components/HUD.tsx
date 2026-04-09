@@ -6,6 +6,8 @@ export const HUD: React.FC = () => {
   const playersMap = useGameStore(state => state.players);
   const isConnected = useGameStore(state => state.isConnected);
   const currentWorld = useGameStore(state => state.currentWorld);
+  const myStamina = useGameStore(state => state.myStamina);
+  const maxStamina = useGameStore(state => state.maxStamina);
 
   const players = Array.from(playersMap.values());
   const me = myId ? playersMap.get(myId) : null;
@@ -30,6 +32,20 @@ export const HUD: React.FC = () => {
             <div 
               className="h-full bg-green-500 shadow-[0_0_10px_rgba(0,255,0,0.5)] transition-all duration-300"
               style={{ width: `${(me.hp / me.maxHp) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Stamina Bar */}
+        <div className="mb-3">
+          <div className="flex justify-between text-[8px] md:text-[10px] text-gray-400 mb-1">
+            <span>SP</span>
+            <span>{Math.floor(myStamina)} / {maxStamina}</span>
+          </div>
+          <div className="h-1.5 md:h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-800">
+            <div 
+              className="h-full bg-blue-500 shadow-[0_0_10px_rgba(0,100,255,0.5)] transition-all duration-100"
+              style={{ width: `${(myStamina / maxStamina) * 100}%` }}
             />
           </div>
         </div>

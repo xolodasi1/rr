@@ -24,6 +24,10 @@ export const initSocket = () => {
     useGameStore.getState().setWorlds(worlds);
   });
 
+  socket.on('environment', (env) => {
+    useGameStore.getState().setEnvironment(env);
+  });
+
   socket.on('init', (players) => {
     useGameStore.getState().initPlayers(players);
   });

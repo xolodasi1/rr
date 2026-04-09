@@ -18,16 +18,55 @@ interface Player {
   isAttacking: boolean;
 }
 
+interface EnvironmentObject {
+  id: string;
+  type: 'tree' | 'rock' | 'bush' | 'altar';
+  x: number;
+  y: number;
+  radius: number;
+}
+
+interface Mob {
+  id: string;
+  worldId: string;
+  type: string;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+}
+
 interface World {
   id: string;
   name: string;
+  environment: EnvironmentObject[];
 }
 
 const players = new Map<string, Player>();
 const worlds = new Map<string, World>();
+const mobs = new Map<string, Mob>();
+
+function generateEnvironment(): EnvironmentObject[] {
+  const env: EnvironmentObject[] = [];
+  // Generate Altar in center
+  env.push({ id: 'altar_1', type: 'altar', x: 1000, y: 1000, radius: 50 });
+  
+  // Generate trees and rocks
+  for (let i = 0; i < 250; i++) {
+    const x = Math.random() * 2000;
+    const y = Math.random() * 2000;
+    // Don't spawn too close to altar
+    if (Math.hypot(x - 1000, y - 1000) < 150) continue;
+    
+    const type = Math.random() > 0.8 ? 'rock' : (Math.random() > 0.5 ? 'tree' : 'bush');
+    const radius = type === 'tree' ? 25 : (type === 'rock' ? 15 : 10);
+    env.push({ id: `env_${i}`, type, x, y, radius });
+  }
+  return env;
+}
 
 // Default world
-worlds.set('floor-1', { id: 'floor-1', name: 'Aincrad - Floor 1' });
+worlds.set('floor-1', { id: 'floor-1', name: 'Aincrad - Floor 1', environment: generateEnvironment() });
 
 function getWorldsList() {
   const list = [];
@@ -66,13 +105,14 @@ async function startServer() {
 
     socket.on("createWorld", (name: string) => {
       const id = 'world_' + Math.random().toString(36).substring(2, 9);
-      worlds.set(id, { id, name });
+      worlds.set(id, { id, name, environment: generateEnvironment() });
       io.emit("worldsList", getWorldsList());
     });
 
     socket.on("joinWorld", (data: { name: string, worldId: string }) => {
       const { name, worldId } = data;
-      if (!worlds.has(worldId) || players.has(socket.id)) return;
+      const world = worlds.get(worldId);
+      if (!world || players.has(socket.id)) return;
 
       socket.join(worldId);
 
@@ -80,25 +120,26 @@ async function startServer() {
         id: socket.id,
         worldId,
         name: name || `Player_${Math.floor(Math.random() * 1000)}`,
-        x: Math.floor(Math.random() * 800) + 100,
-        y: Math.floor(Math.random() * 600) + 100,
+        x: 1000, // Spawn near altar
+        y: 1100,
         level: 1,
         hp: 100,
         maxHp: 100,
-        direction: 'down',
+        direction: 'up',
         isAttacking: false,
       };
       players.set(socket.id, newPlayer);
       
-      // Send current state to the new player (only players in this world)
+      // Send current state to the new player
       const worldPlayers = Array.from(players.values()).filter(p => p.worldId === worldId);
       socket.emit("init", worldPlayers);
+      socket.emit("environment", world.environment);
       
       // Broadcast new player to others in the world
       socket.to(worldId).emit("playerJoined", newPlayer);
       
       // System chat message
-      io.to(worldId).emit("chatMessage", { sender: "System", text: `${newPlayer.name} has linked to ${worlds.get(worldId)?.name}.`, isSystem: true });
+      io.to(worldId).emit("chatMessage", { sender: "System", text: `${newPlayer.name} has linked to ${world.name}.`, isSystem: true });
       
       // Update world counts for everyone
       io.emit("worldsList", getWorldsList());
