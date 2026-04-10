@@ -11,7 +11,7 @@ export const GameCanvas: React.FC = () => {
   const isSprinting = useRef(false);
   
   // Particles for atmosphere
-  const particlesRef = useRef(Array.from({length: 80}, () => ({
+  const particlesRef = useRef(Array.from({length: 30}, () => ({
     x: Math.random() * 2000,
     y: Math.random() * 2000,
     vx: (Math.random() - 0.5) * 0.5,
@@ -222,20 +222,31 @@ export const GameCanvas: React.FC = () => {
         }
       }
 
-      // 5. Sort Depth Layers (Players, Trees, Houses, NPCs)
+      // 5. Sort Depth Layers (Players, Mobs, Trees, Houses, NPCs)
       const players = Array.from(state.players.values());
+      const mobs = Array.from(state.mobs.values());
+      
       const depthObjects = [
-        ...env.filter(e => e.type !== 'path' && e.type !== 'river' && e.type !== 'altar').map(e => ({ ...e, isPlayer: false })),
-        ...players.map(p => ({ ...p, isPlayer: true }))
+        ...env.filter(e => e.type !== 'path' && e.type !== 'river' && e.type !== 'altar').map(e => ({ ...e, objType: 'env' })),
+        ...players.map(p => ({ ...p, objType: 'player' })),
+        ...mobs.map(m => ({ ...m, objType: 'mob' }))
       ];
       
       depthObjects.sort((a, b) => a.y - b.y);
 
       // Draw Depth Layers
-      for (const obj of depthObjects) {
-        if (me && (Math.abs(obj.x - me.x) > 1000 || Math.abs(obj.y - me.y) > 800)) continue;
+      const viewport = {
+        left: cameraX - 100,
+        right: cameraX + canvas.width + 100,
+        top: cameraY - 100,
+        bottom: cameraY + canvas.height + 100
+      };
 
-        if (obj.isPlayer) {
+      for (const obj of depthObjects) {
+        // Culling
+        if (obj.x < viewport.left || obj.x > viewport.right || obj.y < viewport.top || obj.y > viewport.bottom) continue;
+
+        if (obj.objType === 'player') {
           const player = obj as any;
           const isMe = player.id === myId;
           const color = isMe ? '#4caf50' : '#ff9800'; // Green for me, Orange for others
@@ -314,6 +325,54 @@ export const GameCanvas: React.FC = () => {
           ctx.fillStyle = '#8bc34a';
           ctx.fillRect(player.x - 15, player.y - 30, 30 * (player.hp / player.maxHp), 3);
 
+        } else if (obj.objType === 'mob') {
+          const mob = obj as any;
+          // Shadow
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+          ctx.beginPath(); ctx.ellipse(mob.x, mob.y + 12, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+          if (mob.type === 'npc') {
+            // NPC Body
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 5, 9, 0, Math.PI * 2);
+            ctx.fillStyle = '#e1bee7'; // Purple-ish clothes
+            ctx.fill();
+
+            // Head
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 18, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffe0bd';
+            ctx.fill();
+
+            // Hair
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 20, 9, Math.PI, 0);
+            ctx.fillStyle = '#ff9800'; // Orange hair
+            ctx.fill();
+            
+            // Nameplate
+            ctx.fillStyle = '#777';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Villager', mob.x, mob.y - 32);
+          } else {
+            // Monster
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 5, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#e57373'; // Red slime/monster
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(mob.x - 4, mob.y - 7, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(mob.x + 4, mob.y - 7, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(mob.x - 4, mob.y - 7, 1, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(mob.x + 4, mob.y - 7, 1, 0, Math.PI * 2); ctx.fill();
+          }
+
+          // HP bar
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.fillRect(mob.x - 15, mob.y - 30, 30, 3);
+          ctx.fillStyle = '#f44336';
+          ctx.fillRect(mob.x - 15, mob.y - 30, 30 * (mob.hp / mob.maxHp), 3);
+
         } else {
           // Environment Objects
           if (obj.type === 'tree') {
@@ -384,32 +443,6 @@ export const GameCanvas: React.FC = () => {
             ctx.lineTo(obj.x + obj.radius + 10, obj.y - obj.radius);
             ctx.closePath();
             ctx.fill();
-            
-          } else if (obj.type === 'npc') {
-            // Shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.beginPath(); ctx.ellipse(obj.x, obj.y + 12, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
-
-            // NPC Body
-            ctx.beginPath(); ctx.arc(obj.x, obj.y - 5, 9, 0, Math.PI * 2);
-            ctx.fillStyle = '#e1bee7'; // Purple-ish clothes
-            ctx.fill();
-
-            // Head
-            ctx.beginPath(); ctx.arc(obj.x, obj.y - 18, 8, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffe0bd';
-            ctx.fill();
-
-            // Hair
-            ctx.beginPath(); ctx.arc(obj.x, obj.y - 20, 9, Math.PI, 0);
-            ctx.fillStyle = '#ff9800'; // Orange hair
-            ctx.fill();
-            
-            // Nameplate
-            ctx.fillStyle = '#777';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Villager', obj.x, obj.y - 32);
           }
         }
       }

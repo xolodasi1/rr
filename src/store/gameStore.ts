@@ -35,11 +35,13 @@ export interface EnvironmentObject {
 
 export interface Mob {
   id: string;
-  type: string;
+  worldId: string;
+  type: 'npc' | 'monster';
   x: number;
   y: number;
   hp: number;
   maxHp: number;
+  isDead?: boolean;
 }
 
 interface GameState {
@@ -74,6 +76,7 @@ interface GameState {
   
   initMobs: (mobsList: Mob[]) => void;
   updateMob: (id: string, data: Partial<Mob>) => void;
+  updateMobs: (updates: {id: string, x: number, y: number}[]) => void;
   removeMob: (id: string) => void;
 }
 
@@ -144,6 +147,17 @@ export const useGameStore = create<GameState>((set) => ({
     if (mob) {
       newMap.set(id, { ...mob, ...data });
     }
+    return { mobs: newMap };
+  }),
+
+  updateMobs: (updates) => set((state) => {
+    const newMap = new Map(state.mobs);
+    updates.forEach(u => {
+      const mob = newMap.get(u.id);
+      if (mob) {
+        newMap.set(u.id, { ...mob, x: u.x, y: u.y });
+      }
+    });
     return { mobs: newMap };
   }),
 

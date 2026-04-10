@@ -31,11 +31,14 @@ interface EnvironmentObject {
 interface Mob {
   id: string;
   worldId: string;
-  type: string;
+  type: 'npc' | 'monster';
   x: number;
   y: number;
   hp: number;
   maxHp: number;
+  targetX?: number;
+  targetY?: number;
+  isDead?: boolean;
 }
 
 interface World {
@@ -67,12 +70,6 @@ function generateEnvironment(): EnvironmentObject[] {
   env.push({ id: 'house_4', type: 'house', x: 1150, y: 1150, radius: 60 });
   env.push({ id: 'house_5', type: 'house', x: 1000, y: 750, radius: 70 });
 
-  // NPCs in the village
-  env.push({ id: 'npc_1', type: 'npc', x: 950, y: 950, radius: 15 });
-  env.push({ id: 'npc_2', type: 'npc', x: 1050, y: 1050, radius: 15 });
-  env.push({ id: 'npc_3', type: 'npc', x: 900, y: 1000, radius: 15 });
-  env.push({ id: 'npc_4', type: 'npc', x: 1100, y: 950, radius: 15 });
-  
   // Generate Rivers
   for (let r = 0; r < 2; r++) {
     const riverPoints = [];
@@ -107,8 +104,38 @@ function generateEnvironment(): EnvironmentObject[] {
   return env;
 }
 
+function generateMobs(worldId: string) {
+  // NPCs in village
+  for (let i = 0; i < 5; i++) {
+    const id = `npc_${worldId}_${i}`;
+    mobs.set(id, {
+      id, worldId, type: 'npc',
+      x: 900 + Math.random() * 200,
+      y: 900 + Math.random() * 200,
+      hp: 100, maxHp: 100,
+      isDead: false
+    });
+  }
+  // Monsters in forest
+  for (let i = 0; i < 15; i++) {
+    const id = `monster_${worldId}_${i}`;
+    let x = Math.random() * 2000;
+    let y = Math.random() * 2000;
+    if (Math.hypot(x - 1000, y - 1000) < 400) {
+      x += 500; // push out of village
+    }
+    mobs.set(id, {
+      id, worldId, type: 'monster',
+      x, y,
+      hp: 50, maxHp: 50,
+      isDead: false
+    });
+  }
+}
+
 // Default world
 worlds.set('floor-1', { id: 'floor-1', name: 'Aincrad - Floor 1', environment: generateEnvironment() });
+generateMobs('floor-1');
 
 function getWorldsList() {
   const list = [];
@@ -148,6 +175,7 @@ async function startServer() {
     socket.on("createWorld", (name: string) => {
       const id = 'world_' + Math.random().toString(36).substring(2, 9);
       worlds.set(id, { id, name, environment: generateEnvironment() });
+      generateMobs(id);
       io.emit("worldsList", getWorldsList());
     });
 
@@ -175,8 +203,10 @@ async function startServer() {
       
       // Send current state to the new player
       const worldPlayers = Array.from(players.values()).filter(p => p.worldId === worldId);
+      const worldMobs = Array.from(mobs.values()).filter(m => m.worldId === worldId && !m.isDead);
       socket.emit("init", worldPlayers);
       socket.emit("environment", world.environment);
+      socket.emit("mobsInit", worldMobs);
       
       // Broadcast new player to others in the world
       socket.to(worldId).emit("playerJoined", newPlayer);
@@ -209,13 +239,13 @@ async function startServer() {
         const ATTACK_RANGE = 60;
         const DAMAGE = 15;
 
+        // Check players
         for (const [targetId, target] of players.entries()) {
           if (targetId !== socket.id && target.worldId === attacker.worldId) {
             const dx = target.x - attacker.x;
             const dy = target.y - attacker.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Simple directional check
             let isFacing = false;
             if (attacker.direction === 'up' && dy < 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
             if (attacker.direction === 'down' && dy > 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
@@ -235,7 +265,6 @@ async function startServer() {
                   isSystem: true 
                 });
                 
-                // Notify target of respawn/death
                 io.to(attacker.worldId).emit("playerDied", { 
                   id: targetId, 
                   hp: target.hp, 
@@ -247,6 +276,40 @@ async function startServer() {
                   id: targetId, 
                   hp: target.hp 
                 });
+              }
+            }
+          }
+        }
+
+        // Check mobs
+        for (const [mobId, mob] of mobs.entries()) {
+          if (mob.worldId === attacker.worldId && !mob.isDead) {
+            const dx = mob.x - attacker.x;
+            const dy = mob.y - attacker.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            let isFacing = false;
+            if (attacker.direction === 'up' && dy < 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'down' && dy > 0 && Math.abs(dx) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'left' && dx < 0 && Math.abs(dy) < ATTACK_RANGE) isFacing = true;
+            if (attacker.direction === 'right' && dx > 0 && Math.abs(dy) < ATTACK_RANGE) isFacing = true;
+
+            if (distance < ATTACK_RANGE && isFacing) {
+              mob.hp -= DAMAGE;
+              if (mob.hp <= 0) {
+                mob.isDead = true;
+                io.to(attacker.worldId).emit("mobDied", mobId);
+                
+                // Respawn logic
+                setTimeout(() => {
+                  mob.hp = mob.maxHp;
+                  mob.isDead = false;
+                  mob.x = Math.random() * 2000;
+                  mob.y = Math.random() * 2000;
+                  io.to(mob.worldId).emit("mobRespawned", mob);
+                }, 10000);
+              } else {
+                io.to(attacker.worldId).emit("mobHit", { id: mobId, hp: mob.hp });
               }
             }
           }
@@ -301,6 +364,44 @@ async function startServer() {
     
     io.emit('topPlayers', top);
   }, 5000);
+
+  // Mob AI Loop
+  setInterval(() => {
+    const updatesByWorld = new Map<string, any[]>();
+
+    for (const mob of mobs.values()) {
+      if (mob.isDead) continue;
+
+      // Randomly pick a new target
+      if (!mob.targetX || Math.random() < 0.02) {
+        mob.targetX = mob.x + (Math.random() - 0.5) * 300;
+        mob.targetY = mob.y + (Math.random() - 0.5) * 300;
+        // Keep in bounds
+        mob.targetX = Math.max(100, Math.min(1900, mob.targetX));
+        mob.targetY = Math.max(100, Math.min(1900, mob.targetY));
+      }
+
+      const dx = mob.targetX - mob.x;
+      const dy = mob.targetY - mob.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (dist > 5) {
+        const speed = mob.type === 'npc' ? 1 : 1.5;
+        mob.x += (dx / dist) * speed;
+        mob.y += (dy / dist) * speed;
+        
+        if (!updatesByWorld.has(mob.worldId)) updatesByWorld.set(mob.worldId, []);
+        updatesByWorld.get(mob.worldId)!.push({ id: mob.id, x: mob.x, y: mob.y });
+      }
+    }
+
+    // Broadcast updates per world
+    for (const [worldId, updates] of updatesByWorld.entries()) {
+      if (updates.length > 0) {
+        io.to(worldId).emit("mobsUpdate", updates);
+      }
+    }
+  }, 100);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

@@ -71,6 +71,26 @@ export const initSocket = () => {
     useGameStore.getState().setTopPlayers(players);
   });
 
+  socket.on('mobsInit', (mobs) => {
+    useGameStore.getState().initMobs(mobs);
+  });
+
+  socket.on('mobsUpdate', (updates) => {
+    useGameStore.getState().updateMobs(updates);
+  });
+
+  socket.on('mobHit', (data) => {
+    useGameStore.getState().updateMob(data.id, { hp: data.hp });
+  });
+
+  socket.on('mobDied', (id) => {
+    useGameStore.getState().removeMob(id);
+  });
+
+  socket.on('mobRespawned', (mob) => {
+    useGameStore.getState().updateMob(mob.id, mob);
+  });
+
   return socket;
 };
 
