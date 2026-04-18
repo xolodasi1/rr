@@ -52,16 +52,16 @@ export const MainMenu: React.FC = () => {
     <div className="fixed inset-0 bg-[#a3c995] flex items-center justify-center z-50 font-sans">
       {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] bg-white/30 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-green-400/20 rounded-full blur-[100px]" />
+        <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] bg-[#fdfbf7]/40 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#a8e6cf]/30 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative flex flex-col md:flex-row gap-6 w-full max-w-4xl px-4 items-start justify-center">
         
         {/* Main Menu Panel */}
-        <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-2xl w-full max-w-md shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-2xl w-full max-w-md shadow-[0_15px_50px_rgba(0,0,0,0.15)]">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2 tracking-widest drop-shadow-sm">
+            <h1 className="text-4xl font-black text-gray-800 mb-2 tracking-[0.1em] drop-shadow-md">
               AINCRAD ONLINE
             </h1>
             <p className="text-gray-600 text-xs font-bold uppercase tracking-[0.3em]">Virtual Reality MMORPG</p>

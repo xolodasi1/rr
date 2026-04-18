@@ -59,6 +59,20 @@ export const GameCanvas: React.FC = () => {
   }, []);
 
   // Main game loop
+  const envDepthCache = useRef<any[]>([]);
+  const envGroundCache = useRef<any[]>([]);
+  
+  const environment = useGameStore(state => state.environment);
+
+  useEffect(() => {
+    envDepthCache.current = environment
+      .filter(e => e.type !== 'path' && e.type !== 'river' && e.type !== 'altar')
+      .map(e => ({ ref: e, objType: 'env', y: e.y, x: e.x }));
+      
+    envGroundCache.current = environment
+      .filter(e => e.type === 'path' || e.type === 'river' || e.type === 'altar');
+  }, [environment]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -174,7 +188,7 @@ export const GameCanvas: React.FC = () => {
       ctx.translate(-cameraX, -cameraY);
 
       // 4. Draw Environment (Ground Layers First)
-      for (const obj of env) {
+      for (const obj of envGroundCache.current) {
         if (me && (Math.abs(obj.x - me.x) > 1000 || Math.abs(obj.y - me.y) > 800)) continue;
 
         if (obj.type === 'path') {
@@ -222,15 +236,19 @@ export const GameCanvas: React.FC = () => {
         }
       }
 
-      // 5. Sort Depth Layers (Players, Mobs, Trees, Houses, NPCs)
+      // 5. Pre-allocate and Sort Depth Layers (Players, Mobs, Trees, Houses, NPCs)
+      // Avoid map and spread every frame which kills GC and causes lag
       const players = Array.from(state.players.values());
       const mobs = Array.from(state.mobs.values());
       
-      const depthObjects = [
-        ...env.filter(e => e.type !== 'path' && e.type !== 'river' && e.type !== 'altar').map(e => ({ ...e, objType: 'env' })),
-        ...players.map(p => ({ ...p, objType: 'player' })),
-        ...mobs.map(m => ({ ...m, objType: 'mob' }))
-      ];
+      const depthObjects = [...envDepthCache.current];
+      
+      for (const p of players) {
+        depthObjects.push({ ref: p, objType: 'player', y: p.y, x: p.x });
+      }
+      for (const m of mobs) {
+        depthObjects.push({ ref: m, objType: 'mob', y: m.y, x: m.x });
+      }
       
       depthObjects.sort((a, b) => a.y - b.y);
 
@@ -242,12 +260,14 @@ export const GameCanvas: React.FC = () => {
         bottom: cameraY + canvas.height + 100
       };
 
-      for (const obj of depthObjects) {
+      for (const wrapper of depthObjects) {
         // Culling
-        if (obj.x < viewport.left || obj.x > viewport.right || obj.y < viewport.top || obj.y > viewport.bottom) continue;
+        if (wrapper.x < viewport.left || wrapper.x > viewport.right || wrapper.y < viewport.top || wrapper.y > viewport.bottom) continue;
 
-        if (obj.objType === 'player') {
-          const player = obj as any;
+        const objType = wrapper.objType;
+
+        if (objType === 'player') {
+          const player = wrapper.ref as any;
           const isMe = player.id === myId;
           const color = isMe ? '#4caf50' : '#ff9800'; // Green for me, Orange for others
           
@@ -325,16 +345,16 @@ export const GameCanvas: React.FC = () => {
           ctx.fillStyle = '#8bc34a';
           ctx.fillRect(player.x - 15, player.y - 30, 30 * (player.hp / player.maxHp), 3);
 
-        } else if (obj.objType === 'mob') {
-          const mob = obj as any;
+        } else if (objType === 'mob') {
+          const mob = wrapper.ref as any;
           // Shadow
           ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
           ctx.beginPath(); ctx.ellipse(mob.x, mob.y + 12, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
 
-          if (mob.type === 'npc') {
-            // NPC Body
+          if (mob.type === 'villager') {
+            // Villager Body
             ctx.beginPath(); ctx.arc(mob.x, mob.y - 5, 9, 0, Math.PI * 2);
-            ctx.fillStyle = '#e1bee7'; // Purple-ish clothes
+            ctx.fillStyle = '#8d6e63'; // Brown tunic
             ctx.fill();
 
             // Head
@@ -342,16 +362,51 @@ export const GameCanvas: React.FC = () => {
             ctx.fillStyle = '#ffe0bd';
             ctx.fill();
 
-            // Hair
-            ctx.beginPath(); ctx.arc(mob.x, mob.y - 20, 9, Math.PI, 0);
-            ctx.fillStyle = '#ff9800'; // Orange hair
+            // Straw Hat
+            ctx.beginPath(); ctx.ellipse(mob.x, mob.y - 22, 14, 5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#e6c27a';
+            ctx.fill();
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 24, 7, Math.PI, 0);
+            ctx.fillStyle = '#d4a355';
             ctx.fill();
             
             // Nameplate
             ctx.fillStyle = '#777';
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Villager', mob.x, mob.y - 32);
+            ctx.fillText(mob.isFleeing ? '!! Villager !!' : 'Villager', mob.x, mob.y - 36);
+
+          } else if (mob.type === 'knight') {
+            // Knight Body
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 6, 11, 0, Math.PI * 2);
+            ctx.fillStyle = '#90a4ae'; // Steel armor
+            ctx.fill();
+            ctx.lineWidth = 1.5; ctx.strokeStyle = '#546e7a'; ctx.stroke();
+
+            // Head/Helmet
+            ctx.beginPath(); ctx.arc(mob.x, mob.y - 19, 9, 0, Math.PI * 2);
+            ctx.fillStyle = '#cfd8dc'; // Bright steel helmet
+            ctx.fill();
+            ctx.stroke();
+
+            // Helmet Visor
+            ctx.fillStyle = '#263238'; // Dark slit
+            ctx.fillRect(mob.x - 5, mob.y - 21, 10, 3);
+            
+            // Sword
+            ctx.beginPath();
+            ctx.moveTo(mob.x + 10, mob.y - 10);
+            ctx.lineTo(mob.x + 15, mob.y + 10);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#b0bec5';
+            ctx.stroke();
+
+            // Nameplate
+            ctx.fillStyle = '#e53935';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Royal Guard', mob.x, mob.y - 32);
+
           } else {
             // Monster
             ctx.beginPath(); ctx.arc(mob.x, mob.y - 5, 12, 0, Math.PI * 2);
@@ -375,7 +430,7 @@ export const GameCanvas: React.FC = () => {
 
         } else {
           // Environment Objects
-          const envObj = obj as any;
+          const envObj = wrapper.ref as any;
           if (envObj.type === 'tree') {
             // Shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
@@ -466,10 +521,7 @@ export const GameCanvas: React.FC = () => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(200, 255, 200, ${alpha * 0.5})`;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#aaffaa';
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
       ctx.globalCompositeOperation = 'source-over';
 

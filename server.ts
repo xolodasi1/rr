@@ -31,7 +31,7 @@ interface EnvironmentObject {
 interface Mob {
   id: string;
   worldId: string;
-  type: 'npc' | 'monster';
+  type: 'villager' | 'knight' | 'monster';
   x: number;
   y: number;
   hp: number;
@@ -39,6 +39,9 @@ interface Mob {
   targetX?: number;
   targetY?: number;
   isDead?: boolean;
+  targetPlayerId?: string;
+  isFleeing?: boolean;
+  lastAttackTime?: number;
 }
 
 interface World {
@@ -105,14 +108,25 @@ function generateEnvironment(): EnvironmentObject[] {
 }
 
 function generateMobs(worldId: string) {
-  // NPCs in village
+  // Villagers in village
   for (let i = 0; i < 5; i++) {
-    const id = `npc_${worldId}_${i}`;
+    const id = `villager_${worldId}_${i}`;
     mobs.set(id, {
-      id, worldId, type: 'npc',
+      id, worldId, type: 'villager',
       x: 900 + Math.random() * 200,
       y: 900 + Math.random() * 200,
       hp: 100, maxHp: 100,
+      isDead: false
+    });
+  }
+  // Knights (Guards) in village
+  for (let i = 0; i < 3; i++) {
+    const id = `knight_${worldId}_${i}`;
+    mobs.set(id, {
+      id, worldId, type: 'knight',
+      x: 950 + Math.random() * 100,
+      y: 950 + Math.random() * 100,
+      hp: 200, maxHp: 200,
       isDead: false
     });
   }
@@ -296,20 +310,45 @@ async function startServer() {
 
             if (distance < ATTACK_RANGE && isFacing) {
               mob.hp -= DAMAGE;
+              
+              if (mob.hp > 0) {
+                if (mob.type === 'villager') {
+                  mob.isFleeing = true;
+                  mob.targetPlayerId = socket.id;
+                  // Alert nearby knights
+                  for (const guard of mobs.values()) {
+                    if (guard.worldId === attacker.worldId && guard.type === 'knight' && !guard.isDead) {
+                      if (Math.hypot(guard.x - mob.x, guard.y - mob.y) < 500) {
+                        guard.targetPlayerId = socket.id;
+                      }
+                    }
+                  }
+                } else if (mob.type === 'knight' || mob.type === 'monster') {
+                  mob.targetPlayerId = socket.id;
+                }
+                io.to(attacker.worldId).emit("mobHit", { id: mobId, hp: mob.hp });
+              }
+
               if (mob.hp <= 0) {
                 mob.isDead = true;
+                mob.targetPlayerId = undefined;
+                mob.isFleeing = false;
                 io.to(attacker.worldId).emit("mobDied", mobId);
                 
                 // Respawn logic
                 setTimeout(() => {
                   mob.hp = mob.maxHp;
                   mob.isDead = false;
-                  mob.x = Math.random() * 2000;
-                  mob.y = Math.random() * 2000;
+                  // Try spawning inside village for village mobs
+                  if (mob.type === 'villager' || mob.type === 'knight') {
+                    mob.x = 800 + Math.random() * 400;
+                    mob.y = 800 + Math.random() * 400;
+                  } else {
+                    mob.x = Math.random() * 2000;
+                    mob.y = Math.random() * 2000;
+                  }
                   io.to(mob.worldId).emit("mobRespawned", mob);
                 }, 10000);
-              } else {
-                io.to(attacker.worldId).emit("mobHit", { id: mobId, hp: mob.hp });
               }
             }
           }
@@ -372,26 +411,89 @@ async function startServer() {
     for (const mob of mobs.values()) {
       if (mob.isDead) continue;
 
-      // Randomly pick a new target
-      if (!mob.targetX || Math.random() < 0.02) {
+      let speed = mob.type === 'villager' ? 0.8 : (mob.type === 'knight' ? 1.4 : 1.2);
+      let dx = 0, dy = 0, dist = 0;
+
+      if (mob.targetPlayerId) {
+        const target = players.get(mob.targetPlayerId);
+        if (!target || target.worldId !== mob.worldId || target.hp <= 0) {
+          mob.targetPlayerId = undefined;
+          mob.isFleeing = false;
+        } else {
+          dx = target.x - mob.x;
+          dy = target.y - mob.y;
+          dist = Math.hypot(dx, dy);
+
+          if (mob.type === 'villager') {
+            if (dist > 600) {
+              mob.targetPlayerId = undefined;
+              mob.isFleeing = false;
+            } else {
+              // Run AWAY
+              speed = 1.8;
+              mob.targetX = mob.x - dx;
+              mob.targetY = mob.y - dy;
+              // Keep in bounds
+              mob.targetX = Math.max(100, Math.min(1900, mob.targetX));
+              mob.targetY = Math.max(100, Math.min(1900, mob.targetY));
+            }
+          } else {
+            // Knight or Monster
+            if (dist > 800) {
+              mob.targetPlayerId = undefined;
+            } else if (dist < 40) {
+              // ATTACK
+              speed = 0;
+              const now = Date.now();
+              if (!mob.lastAttackTime || now - mob.lastAttackTime > 1500) {
+                mob.lastAttackTime = now;
+                const damageDealt = mob.type === 'knight' ? 30 : 15;
+                target.hp -= damageDealt;
+                
+                if (target.hp <= 0) {
+                  target.hp = target.maxHp;
+                  target.x = 1000; target.y = 1000; // Return to altar
+                  io.to(mob.worldId).emit("chatMessage", { sender: "System", text: `${target.name} was slain by a ${mob.type}.`, isSystem: true });
+                  io.to(mob.worldId).emit("playerDied", { id: target.id, hp: target.hp, x: target.x, y: target.y });
+                  mob.targetPlayerId = undefined;
+                } else {
+                  io.to(mob.worldId).emit("playerHit", { id: target.id, hp: target.hp });
+                }
+              }
+            } else {
+              // Chase
+              speed = mob.type === 'knight' ? 2.0 : 1.6;
+              mob.targetX = target.x;
+              mob.targetY = target.y;
+            }
+          }
+        }
+      }
+
+      // Random Roaming
+      if (!mob.targetPlayerId && (!mob.targetX || Math.random() < 0.02)) {
         mob.targetX = mob.x + (Math.random() - 0.5) * 300;
         mob.targetY = mob.y + (Math.random() - 0.5) * 300;
-        // Keep in bounds
         mob.targetX = Math.max(100, Math.min(1900, mob.targetX));
         mob.targetY = Math.max(100, Math.min(1900, mob.targetY));
       }
 
-      const dx = mob.targetX - mob.x;
-      const dy = mob.targetY - mob.y;
-      const dist = Math.hypot(dx, dy);
-      
-      if (dist > 5) {
-        const speed = mob.type === 'npc' ? 1 : 1.5;
-        mob.x += (dx / dist) * speed;
-        mob.y += (dy / dist) * speed;
+      // Apply movement
+      if (mob.targetX && mob.targetY) {
+        dx = mob.targetX - mob.x;
+        dy = mob.targetY - mob.y;
+        dist = Math.hypot(dx, dy);
         
-        if (!updatesByWorld.has(mob.worldId)) updatesByWorld.set(mob.worldId, []);
-        updatesByWorld.get(mob.worldId)!.push({ id: mob.id, x: mob.x, y: mob.y });
+        if (dist > 5) {
+          mob.x += (dx / dist) * speed;
+          mob.y += (dy / dist) * speed;
+          
+          if (!updatesByWorld.has(mob.worldId)) updatesByWorld.set(mob.worldId, []);
+          updatesByWorld.get(mob.worldId)!.push({ id: mob.id, x: mob.x, y: mob.y });
+        } else if (!mob.targetPlayerId) {
+          mob.targetX = undefined;
+          mob.targetY = undefined;
+        }
       }
     }
 
