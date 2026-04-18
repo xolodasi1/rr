@@ -375,72 +375,73 @@ export const GameCanvas: React.FC = () => {
 
         } else {
           // Environment Objects
-          if (obj.type === 'tree') {
+          const envObj = obj as any;
+          if (envObj.type === 'tree') {
             // Shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.beginPath(); ctx.ellipse(obj.x, obj.y + obj.radius*0.8, obj.radius*0.8, obj.radius*0.3, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(envObj.x, envObj.y + envObj.radius*0.8, envObj.radius*0.8, envObj.radius*0.3, 0, 0, Math.PI * 2); ctx.fill();
             
             // Trunk
             ctx.fillStyle = '#7a5c43';
-            ctx.fillRect(obj.x - obj.radius*0.15, obj.y, obj.radius*0.3, obj.radius);
+            ctx.fillRect(envObj.x - envObj.radius*0.15, envObj.y, envObj.radius*0.3, envObj.radius);
             
             // Leaves (Soft overlapping circles)
             ctx.fillStyle = '#6ebd52';
-            ctx.beginPath(); ctx.arc(obj.x, obj.y - obj.radius*0.2, obj.radius, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(envObj.x, envObj.y - envObj.radius*0.2, envObj.radius, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#7cb369';
-            ctx.beginPath(); ctx.arc(obj.x - obj.radius*0.4, obj.y - obj.radius*0.5, obj.radius*0.8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(envObj.x - envObj.radius*0.4, envObj.y - envObj.radius*0.5, envObj.radius*0.8, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#8bd175';
-            ctx.beginPath(); ctx.arc(obj.x + obj.radius*0.4, obj.y - obj.radius*0.6, obj.radius*0.7, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(envObj.x + envObj.radius*0.4, envObj.y - envObj.radius*0.6, envObj.radius*0.7, 0, Math.PI*2); ctx.fill();
             
-          } else if (obj.type === 'rock') {
+          } else if (envObj.type === 'rock') {
             // Shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.beginPath(); ctx.ellipse(obj.x, obj.y + obj.radius*0.5, obj.radius, obj.radius*0.4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(envObj.x, envObj.y + envObj.radius*0.5, envObj.radius, envObj.radius*0.4, 0, 0, Math.PI * 2); ctx.fill();
             
             // Rock body
             ctx.fillStyle = '#a8b0b5';
             ctx.beginPath();
-            ctx.moveTo(obj.x - obj.radius, obj.y + obj.radius*0.5);
-            ctx.lineTo(obj.x - obj.radius*0.5, obj.y - obj.radius);
-            ctx.lineTo(obj.x + obj.radius*0.8, obj.y - obj.radius*0.5);
-            ctx.lineTo(obj.x + obj.radius, obj.y + obj.radius*0.5);
+            ctx.moveTo(envObj.x - envObj.radius, envObj.y + envObj.radius*0.5);
+            ctx.lineTo(envObj.x - envObj.radius*0.5, envObj.y - envObj.radius);
+            ctx.lineTo(envObj.x + envObj.radius*0.8, envObj.y - envObj.radius*0.5);
+            ctx.lineTo(envObj.x + envObj.radius, envObj.y + envObj.radius*0.5);
             ctx.closePath();
             ctx.fill();
             
             // Highlight
             ctx.fillStyle = '#c5ccd1';
             ctx.beginPath();
-            ctx.moveTo(obj.x - obj.radius*0.8, obj.y + obj.radius*0.3);
-            ctx.lineTo(obj.x - obj.radius*0.4, obj.y - obj.radius*0.8);
-            ctx.lineTo(obj.x + obj.radius*0.2, obj.y - obj.radius*0.2);
+            ctx.moveTo(envObj.x - envObj.radius*0.8, envObj.y + envObj.radius*0.3);
+            ctx.lineTo(envObj.x - envObj.radius*0.4, envObj.y - envObj.radius*0.8);
+            ctx.lineTo(envObj.x + envObj.radius*0.2, envObj.y - envObj.radius*0.2);
             ctx.closePath();
             ctx.fill();
 
-          } else if (obj.type === 'bush') {
+          } else if (envObj.type === 'bush') {
             ctx.fillStyle = '#5c9e47';
-            ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(envObj.x, envObj.y, envObj.radius, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#6ebd52';
-            ctx.beginPath(); ctx.arc(obj.x - obj.radius*0.2, obj.y - obj.radius*0.2, obj.radius*0.6, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(envObj.x - envObj.radius*0.2, envObj.y - envObj.radius*0.2, envObj.radius*0.6, 0, Math.PI * 2); ctx.fill();
 
-          } else if (obj.type === 'house') {
+          } else if (envObj.type === 'house') {
             // Shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.fillRect(obj.x - obj.radius, obj.y - obj.radius*0.2, obj.radius*2, obj.radius*1.2);
+            ctx.fillRect(envObj.x - envObj.radius, envObj.y - envObj.radius*0.2, envObj.radius*2, envObj.radius*1.2);
             
             // Walls
             ctx.fillStyle = '#fdfdfd';
-            ctx.fillRect(obj.x - obj.radius, obj.y - obj.radius, obj.radius*2, obj.radius*2);
+            ctx.fillRect(envObj.x - envObj.radius, envObj.y - envObj.radius, envObj.radius*2, envObj.radius*2);
             
             // Door
             ctx.fillStyle = '#8b5a2b';
-            ctx.fillRect(obj.x - 10, obj.y + obj.radius - 30, 20, 30);
+            ctx.fillRect(envObj.x - 10, envObj.y + envObj.radius - 30, 20, 30);
             
             // Roof
             ctx.fillStyle = '#d35400'; // Orange/Brown roof
             ctx.beginPath();
-            ctx.moveTo(obj.x - obj.radius - 10, obj.y - obj.radius);
-            ctx.lineTo(obj.x, obj.y - obj.radius - 40);
-            ctx.lineTo(obj.x + obj.radius + 10, obj.y - obj.radius);
+            ctx.moveTo(envObj.x - envObj.radius - 10, envObj.y - envObj.radius);
+            ctx.lineTo(envObj.x, envObj.y - envObj.radius - 40);
+            ctx.lineTo(envObj.x + envObj.radius + 10, envObj.y - envObj.radius);
             ctx.closePath();
             ctx.fill();
           }

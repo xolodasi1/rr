@@ -6,8 +6,15 @@ let socket: Socket | null = null;
 export const initSocket = () => {
   if (socket) return socket;
 
-  // Connect using websocket only to prevent polling ghost connections
-  socket = io({ transports: ['websocket'] });
+  // Connect using current origin explicitly
+  const isProd = (import.meta as any).env?.PROD;
+  const socketUrl = isProd ? window.location.origin : undefined;
+  
+  socket = io(socketUrl, { 
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5
+  });
 
   socket.on('connect', () => {
     console.log('Connected to server');
